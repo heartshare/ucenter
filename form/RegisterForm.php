@@ -24,22 +24,42 @@ class RegisterForm extends CFormModel {
 
     public function rules()
     {
+
+
+
         $rules = array(
             array('username', 'length', 'min'=>2, 'max'=>16),
-            array('username', 'unique', 'className'=>'UcenterMember', 'attributes'=>'username', 'message'=>Yii::t('ucenterModule.passport','username unique')),
-            array('username', 'unique', 'className'=>'UcenterMember', 'attributeName'=>'email', 'message'=>Yii::t('ucenterModule.passport','email unique')),
-            array('username', 'unique', 'className'=>'UcenterMember', 'attributeName'=>'mobile', 'message'=>Yii::t('ucenterModule.passport','mobile unique')),
             array('username','match', 'pattern'=>'/(^\w+((-\w+)|(\.\w+))*\@[A-Za-z0-9]+((\.|-)[A-Za-z0-9]+)*\.[A-Za-z0-9]+$)|(^1[3458]\d{9}$)|(^[A-Za-z_\-\x{4e00}-\x{9fa5}][A-Za-z0-9_\-\x{4e00}-\x{9fa5}]+$)/u', 'message'=>Yii::t('ucenterModule.passport','username do not match')),
             array('password','length','min'=>6),
             array('username, password, repassword', 'required', 'message'=>Yii::t('ucenterModule.passport','{attribute} not null')),
             array('repassword', 'compare', 'compareAttribute'=>'password' ,'message'=>Yii::t('ucenterModule.passport','password twice inconsistent')),
-            array('ready', 'in','range'=>array(1), 'message'=>Yii::t('ucenterModule.passport','ready require selected')),
+
+            array('username', 'unique', 'className'=>'UcenterMember', 'attributes'=>'username', 'message'=>Yii::t('ucenterModule.passport','username unique')),
         );
 
-        if(UcenterMember::typeUsername(isset($_POST['RegisterForm']['username'])?$_POST['RegisterForm']['username']:'') == 'mobile' && Yii::app()->controller->module->smsVerify){
+        if(Yii::app()->controller->module->readyEnabled)
+        {
+            $rules[] = array('ready', 'in','range'=>array(1), 'message'=>Yii::t('ucenterModule.passport','ready require selected'));
+        }
+
+        if(in_array('email',Yii::app()->controller->module->registerField))
+        {
+            $rules[] = array('username', 'unique', 'className'=>'UcenterMember', 'attributeName'=>'email', 'message'=>Yii::t('ucenterModule.passport','email unique'));
+        } else {
+            $rules[] = array('username','match', 'pattern'=>'/^\w+((-\w+)|(\.\w+))*\@[A-Za-z0-9]+((\.|-)[A-Za-z0-9]+)*\.[A-Za-z0-9]+$/', 'not'=>true, 'message'=>Yii::t('ucenterModule.passport','username do not match'));
+        }
+
+        if(in_array('mobile',Yii::app()->controller->module->registerField))
+        {
+            $rules[] = array('username', 'unique', 'className'=>'UcenterMember', 'attributeName'=>'mobile', 'message'=>Yii::t('ucenterModule.passport','mobile unique'));
+        } else {
+            $rules[] = array('username','match', 'pattern'=>'/^1[3458]\d{9}$/', 'not'=>true, 'message'=>Yii::t('ucenterModule.passport','username do not match'));
+        }
+
+        if(UcenterMember::typeUsername(isset($_POST['RegisterForm']['username'])?$_POST['RegisterForm']['username']:'') == 'mobile' && Yii::app()->controller->module->smsEnabled){
             $rules[] = array('mobileCode','required', 'message'=>Yii::t('ucenterModule.passport','{attribute} not null'));
             $rules[] = array('mobileCode','verifyMobile');
-        } else {
+        } elseif(Yii::app()->controller->module->verifyCodeEnabled) {
             $rules[] = array('verifyCode','required', 'message'=>Yii::t('ucenterModule.passport','{attribute} not null'));
             $rules[] = array('verifyCode', 'captcha', 'allowEmpty'=>!CCaptcha::checkRequirements());
         }
@@ -65,6 +85,11 @@ class RegisterForm extends CFormModel {
         );
     }
 
+    /**
+     * 验证短信验证码
+     * @param $attr
+     * @author   lu yan hua <838777565@qq.com>
+     */
     public function verifyMobile($attr)
     {
         if(!$this->hasErrors())
@@ -105,6 +130,7 @@ class RegisterForm extends CFormModel {
 
             if($model->validate()){
                 $model->save();
+                return $model;
             }
 
             //处理错误

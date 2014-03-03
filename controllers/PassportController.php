@@ -47,6 +47,8 @@ class PassportController extends UController {
                 $this->redirect(Yii::app()->user->returnUrl);
             }
         }
+        Yii::app()->user->setReturnUrl(Yii::app()->request->urlReferrer);
+
         $this->render('login',array('model'=>$model));
     }
 
@@ -56,6 +58,19 @@ class PassportController extends UController {
      */
     public function actionRegister()
     {
+
+        // 是否关闭注册功能
+        if(!$this->module->registerEnabled)
+        {
+            throw new CHttpException(404,Yii::t('ucenterModule.passport','register closed'));
+            Yii::app()->end();
+        }
+
+        // 允许注册字段
+        if(empty(Yii::app()->controller->module->registerField))
+        {
+            throw new CException(Yii::t('ucenterModule.passport','registerField no null'));
+        }
 
         $model=new RegisterForm;
 
@@ -70,14 +85,21 @@ class PassportController extends UController {
         {
             $model->attributes=$_POST['RegisterForm'];
 
-            if($model->validate() && $model->register())
+            if($model->validate() && $user = $model->register())
             {
-                // form inputs are valid, do something here
-                return;
+                $ticket = array(
+                    'id' => $user->id,
+                    'username' => $user->username,
+                );
+                $ticket = UcenterModule::ucenterEncrypt(serialize($ticket),$this->module->authKey);
+                $this->redirect(array('success','ticket'=>$ticket));
             }
 
         }
-        if($this->module->smsVerify)
+
+        Yii::app()->user->setReturnUrl(Yii::app()->request->urlReferrer);
+
+        if($this->module->smsEnabled) //是否需要短信验证
         {
             Yii::app()->session->add('sms_verify_code',rand(0,9).rand(0,9).rand(0,9).rand(0,9));
         }
@@ -90,7 +112,28 @@ class PassportController extends UController {
      */
     public function actionSendSMS()
     {
-
         echo Yii::app()->session->get('sms_verify_code');
+    }
+
+    /**
+     *
+     * @author   lu yan hua <838777565@qq.com>
+     */
+    public function actionSuccess()
+    {
+        $mail = Yii::app()->mailer;
+        $message = '<a href="http://www.sparui.com">测试html</a>';
+        $mail->SetFrom('sparui@163.com','Sparui');
+        $mail->AddAddress('838777565@qq.com');
+        $mail->Subject = 'YII注册信息';
+        $mail->Body = $message;
+        if ($mail->Send()) {
+            echo '发送成功';
+        } else {
+            echo $mail->ErrorInfo;
+        }
+
+//        echo UcenterModule::ucenterDecrypt($_GET['ticket'],$this->module->authKey);
+        $this->render('success');
     }
 } 

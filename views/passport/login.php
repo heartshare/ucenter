@@ -29,4 +29,6 @@
 
 <?php $this->endWidget(); ?>
 
+    <?php echo CHtml::link('注册',array('register')); ?>
+
 </div><!-- form -->

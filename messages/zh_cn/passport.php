@@ -9,7 +9,7 @@
 
 return array(
     'id'                                    => '用户ID',
-    'username'                              => '用户名',
+    'username'                              => '账户名',
     'password'                              => '密码',
     'mobile'                                => '手机号码',
     'email'                                 => '邮箱',
@@ -35,4 +35,6 @@ return array(
     'ready require selected'                => '请接受服务条款!',
     'username do not match'                 => '用户名只能由中文、英文开头、数字及“_”、“-”组成',
     'sms verify code error'                 => '短信验证码错误!',
+    'register closed'                       => '用户注册功能暂时关闭!',
+    'registerField no null'                 => '允许注册字段未设置!',
 );
